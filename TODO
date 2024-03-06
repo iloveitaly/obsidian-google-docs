@@ -1,0 +1,4 @@
+* Specify direct URL vs folder in properties
+* Exclude properties from being pushed to google docs
+* Test the comment check
+* Reduce logging
