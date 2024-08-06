@@ -37,6 +37,17 @@ export default class GoogleDocsPlugin extends Plugin {
 			}
 		});
 
+		this.addCommand({
+			id: 'open-in-google-docs',
+			name: 'Open in Google Docs',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				const title = view.file.basename
+				const markdownContents = editor.getValue()
+
+				this.openGoogleDoc(title, markdownContents)
+			}
+		})
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new GoogleDocSettingTab(this.app, this));
 	}
@@ -51,7 +62,7 @@ export default class GoogleDocsPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async createGoogleDoc(title: string, content: string) {
+	async getAuth() {
 		if (this.authorizationServer) {
 			new Notice('Already authenticating, complete authorization.')
 			return
@@ -80,12 +91,26 @@ export default class GoogleDocsPlugin extends Plugin {
 			new Notice('Authentication complete!')
 		}
 
+		return auth
+	}
+
+	async openGoogleDoc(title: string, markdownContents: string) {
+		const auth = await this.getAuth()
+		new Notice('Opening Google Doc...')
 		const documentId = await findOrCreateDoc(title, this.settings.googleDriveFolderId, auth)
-		// if (await hasOpenComments(auth, documentId)) {
-		// 	new Notice('Document has open comments. Please resolve them before pushing content.')
-		// 	navigator.clipboard.writeText(googleDocsUrl(documentId))
-		// 	return
-		// }
+		const documentUrl = googleDocsUrl(documentId)
+		opn(documentUrl)
+	}
+
+	async createGoogleDoc(title: string, content: string) {
+		const auth = await this.getAuth()
+		const documentId = await findOrCreateDoc(title, this.settings.googleDriveFolderId, auth)
+
+		if (await hasOpenComments(auth, documentId)) {
+			new Notice('Document has open comments. Please resolve them before pushing content.')
+			navigator.clipboard.writeText(googleDocsUrl(documentId))
+			return
+		}
 
 		await updateHtml(documentId, content, auth, { wipe: true })
 		navigator.clipboard.writeText(googleDocsUrl(documentId))
